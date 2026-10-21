@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Bot de fallas — puente Centrality",
+  "version": "1.0.0",
+  "description": "Lee fallas de Centrality con tu sesión y las envía al bot local (127.0.0.1) para avisar calles y clientes afectados. Ninguna credencial sale del navegador.",
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "alarms",
+    "storage",
+    "scripting",
+    "tabs",
+    "notifications"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Bot de fallas",
+    "default_icon": {
+      "128": "icon128.png"
+    }
+  },
+  "options_page": "options.html",
+  "icons": {
+    "128": "icon128.png"
+  }
+}

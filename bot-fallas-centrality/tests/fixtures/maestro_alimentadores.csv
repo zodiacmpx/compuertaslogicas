@@ -1,0 +1,5 @@
+﻿COD,cod_centrality,EMPRESA,ZONA,SUB-ZONA,SUBESTACIÓN,NOMBRE ALIMENTADOR,clientes_total,kva_total,n_comunas,comuna_dominante,pureza,flag_ambiguo,comuna_id,cluster,ccd
+260,A260,Saesa,9-Osorno,9-Osorno,OSORNO,Ficticio Centro,1300.0,4500.0,1,OSORNO,1.0,OK,99901,osorno,ccd_sur
+261,A261,Saesa,9-Osorno,9-Osorno,OSORNO,Ficticio Rahue,2000.0,6100.0,2,OSORNO,0.9,OK,99901,osorno,ccd_sur
+0300,A300,Saesa,9-Osorno,9-Osorno,PURRANQUE,Ficticio Rural,500.0,900.0,2,Puerto Octay,0.7,OK,99902,osorno,ccd_sur
+101,A101,Frontel,1-Concepción,1-Concepción,CORONEL,Ficticio Industrial,850.0,2140.0,1,Coronel,1.0,OK,99903,biobio,ccd_norte

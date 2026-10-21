@@ -1,0 +1,5 @@
+#,📞,🏢,📍,🔢,👤,☎️,📝,🎧,💬,❓,🕒,🚚,✅,❎,⏱️,⚠️,⚡,👥,🗺️,🌐
+R-2001,40808515,SAESA,"AV. MATTA 1300, OSORNO",1000010,JUAN PRUEBA,+56 9 1111 1111,Cliente indica que no tiene luz,OPERADORA PRUEBA,Sin comentarios,Sin Suministro,2026-10-21 14:41:00,BBOO 9001 PRUEBA,,,,Con peligro,Verdadero,Alto,OSORNO,SE OSORNO > A260 > SED 12345
+R-2002,40808515,SAESA,BULNES 77 / RAHUE-OSORNO / CL,1000011,MARIA PRUEBA,+56 9 2222 2222,"Texto, con comas
+y salto",OPERADORA PRUEBA,Sin comentarios,Sin Suministro,2026-10-21 14:43:00,BBOO 9001 PRUEBA,,,,Sin peligro,Falso,Medio,OSORNO,
+R-2003,40899999,FRONTEL,,8000001,ANA PRUEBA,+56 9 4444 4444,Cliente indica que no tiene luz,OPERADORA PRUEBA,Sin comentarios,Parpadeos/Oscilaciones,2026-10-21 15:00:00,BBOO 9001 PRUEBA,,,2026-10-21 15:30:00,Sin peligro,Verdadero,Bajo,TEMUCO,

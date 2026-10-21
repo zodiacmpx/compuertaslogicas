@@ -1,0 +1,103 @@
+{
+  "_ayuda": "Copia este archivo como config.json (queda fuera de git). Las claves que empiezan con _ son comentarios y se ignoran. Rutas relativas = relativas a la carpeta de este archivo. En rutas de Windows usa / o doble barra invertida.",
+
+  "servidor": {
+    "_ayuda": "Sólo loopback. origenes_permitidos: el origen de Centrality tal como lo ves en el navegador, p. ej. https://<host>:<puerto> (sin ruta ni barra final), para que la pestaña pueda postear directo; las extensiones de Chrome ya están permitidas. token_compartido: opcional, el mismo valor en Opciones de la extensión.",
+    "host": "127.0.0.1",
+    "puerto": 8771,
+    "token_compartido": "",
+    "origenes_permitidos": [],
+    "permitir_extensiones": true,
+    "max_bytes": 52428800
+  },
+
+  "datos_dir": "datos",
+
+  "fuentes": {
+    "_ayuda": "frescura_min: una fuente sin datos nuevos en ese tiempo deja de contar (no normaliza nada). cuenta_ausencia: si 'ya no aparece' en esa fuente cuenta como normalización; la grilla NUNCA (puede estar filtrada o paginada).",
+    "casos": {"frescura_min": 30, "cuenta_ausencia": true},
+    "reclamos": {"frescura_min": 30, "cuenta_ausencia": true},
+    "abiertas": {"frescura_min": 30, "cuenta_ausencia": true},
+    "grilla": {"frescura_min": 30, "cuenta_ausencia": false}
+  },
+
+  "filtros": {
+    "_ayuda": "Listas vacías = no filtrar. ccd: [\"SUR\"] para sólo CCD Sur (requiere maestro de alimentadores o zonal). incluir_si_desconocido: si una falla no tiene CCD/zonal/comuna conocida, igual se avisa.",
+    "min_clientes": 1,
+    "min_reclamos_sin_clientes": 3,
+    "incluir_programadas": false,
+    "ccd": [],
+    "zonales": [],
+    "comunas": [],
+    "empresas": [],
+    "incluir_si_desconocido": true
+  },
+
+  "niveles": {
+    "_ayuda": "Cortes por clientes interrumpidos: masivo >= 1000, alta >= 300, media >= 50, baja < 50.",
+    "masivo": 1000,
+    "alta": 300,
+    "media": 50
+  },
+
+  "avisos": {
+    "_ayuda": "delta_clientes_rel es fracción (0.25 = 25 %). Una actualización frenada por min_intervalo no se pierde: sale en la siguiente evaluación.",
+    "min_intervalo_actualizacion_min": 10,
+    "delta_clientes_abs": 50,
+    "delta_clientes_rel": 0.25,
+    "min_calles_nuevas": 3,
+    "minutos_ausencia_normalizar": 15,
+    "evaluaciones_ausencia_normalizar": 2,
+    "expiracion_sin_datos_min": 720,
+    "retener_normalizadas_h": 24,
+    "resumen_al_iniciar": true,
+    "max_calles_mensaje": 15,
+    "avisar_normalizadas": true,
+    "avisar_reposicion_parcial": true,
+    "alerta_sin_datos_min": 30,
+    "recalculo_periodico_s": 120
+  },
+
+  "maestros": {
+    "_ayuda": "Archivos locales opcionales (déjalos en datos/, que no va a git). Vacío = no usar. calles: CSV propio tipo,clave,calle,comuna,clientes con tipo = sed o alimentador.",
+    "alimentadores": "",
+    "zonal": "",
+    "calles": "",
+    "ratio_alimentador_completo": 0.8
+  },
+
+  "telegram": {
+    "_ayuda": "Deja token vacío y guárdalo en la variable de entorno de token_env (setx BOT_FALLAS_TELEGRAM_TOKEN \"...\"). chats: escribe /id al bot en el grupo y copia el número (negativo en grupos). chats_comandos vacío = los mismos chats. proxy: http://usuario@proxy:puerto si el PC sale por proxy y no lo toma de Windows; ca_bundle: .pem de la CA corporativa si hay inspección TLS.",
+    "activo": false,
+    "token": "",
+    "token_env": "BOT_FALLAS_TELEGRAM_TOKEN",
+    "chats": [],
+    "comandos": true,
+    "chats_comandos": [],
+    "timeout_s": 20,
+    "proxy": "",
+    "ca_bundle": ""
+  },
+
+  "teams": {
+    "_ayuda": "Webhook de un flujo de Workflows/Power Automate ('cuando se recibe una solicitud de webhook'). Es un secreto: mejor en la variable de entorno de webhook_env.",
+    "activo": false,
+    "webhook_url": "",
+    "webhook_env": "BOT_FALLAS_TEAMS_WEBHOOK",
+    "timeout_s": 20,
+    "proxy": "",
+    "ca_bundle": ""
+  },
+
+  "archivo": {
+    "_ayuda": "Una línea JSON por aviso: auditoría local y respaldo si Telegram falla.",
+    "activo": true,
+    "ruta": "datos/avisos.jsonl"
+  },
+
+  "log": {
+    "_ayuda": "nivel: DEBUG, INFO, WARNING, ERROR. El log nunca incluye tokens, NIS, nombres ni teléfonos.",
+    "ruta": "datos/bot.log",
+    "nivel": "INFO"
+  }
+}

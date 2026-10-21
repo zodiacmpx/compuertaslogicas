@@ -1,0 +1,10 @@
+Caso,Codigo de alimentador,Causa sec,Analista Inicial,Fecha de  Creacion,Analista Final,Fecha de  Cierre,Clientes Interrumpidos,Tipo instalacion,Componente,Origen interrupcion,Descripcion despacho
+40808515,A260,Falla de equipo,ANALISTA PRUEBA,2026-10-21T14:32:00,,,1200,Aerea,Desconectador fusible,Operacion de protecciones ,"Brigada en ruta, cliente JUAN PRUEBA fono +56 9 1111 1111
+informa poste caido en AV. MATTA 1234"
+40808515,A261,Falla de equipo,ANALISTA PRUEBA,2026-10-21T14:35:00,,,40,Aerea,Desconectador fusible,Operacion de protecciones,
+40808515,A260,Falla de equipo,ANALISTA PRUEBA,2026-10-21T14:40:00,,,1150,Aerea,Desconectador fusible,Operacion de protecciones,reenvio de la misma fila con otro conteo
+40811111,a0300,Arbol sobre linea,ANALISTA PRUEBA,-infinity,,-infinity,80,Aerea,Conductor,,
+40822222,101,Viento,ANALISTA PRUEBA,2026-10-21T08:00:00,ANALISTA PRUEBA,2026-10-21T10:15:00,300,Aerea,Aislador,Operacion de protecciones,
+40833333,0412,Mantenimiento,ANALISTA PRUEBA,2026-10-22T09:00:00,,,25,Aerea,Transformador,Programada ,Corte programado
+,A260,,ANALISTA PRUEBA,2026-10-21T15:00:00,,,10,,,,fila sin caso
+,,,,,,,,,,,

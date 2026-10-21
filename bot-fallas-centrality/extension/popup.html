@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="ui.css">
+<title>Bot de fallas</title>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icon128.png" alt="">
+      <div><h1>Bot de fallas</h1><div class="sub">Centrality → calles y clientes afectados</div></div>
+    </div>
+    <span id="estadoGlobal" class="pill">cargando</span>
+  </header>
+
+  <main class="popup">
+    <div id="banner"></div>
+
+    <section class="card">
+      <h2>Bot local</h2>
+      <div class="kpis">
+        <div class="kpi"><div class="k">Fallas activas</div><div class="v" id="kFallas">—</div></div>
+        <div class="kpi"><div class="k">Casos seguidos</div><div class="v" id="kCasos">—</div></div>
+        <div class="kpi"><div class="k">Último ciclo</div><div class="v" id="kCiclo">—</div></div>
+      </div>
+      <div id="fuentesBot"></div>
+      <div id="canales"></div>
+    </section>
+
+    <section class="card">
+      <h2>Fallas activas (mayor a menor)</h2>
+      <div id="fallas"><div class="empty">Cargando…</div></div>
+    </section>
+
+    <div class="btns" style="margin-bottom:10px">
+      <button class="btn" id="btnSync">Sincronizar ahora</button>
+      <button class="btn ghost" id="btnDiag">Diagnóstico</button>
+      <button class="btn ghost" id="btnOpts">Configuración</button>
+      <button class="btn ghost" id="btnMonitor">Monitor</button>
+    </div>
+
+    <section class="card oculto" id="cardDiag">
+      <h2>Diagnóstico de la cadena</h2>
+      <div id="diag"></div>
+    </section>
+
+    <section class="card">
+      <div class="row" style="padding-top:0">
+        <div class="name"><b>Extensión</b><small id="syncMeta">—</small></div>
+        <span class="pill" id="syncEstado">—</span>
+      </div>
+      <div class="log" id="log"></div>
+    </section>
+  </main>
+<script src="plantillas.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# Config local: puede tener token, chat_ids y el host de Centrality. NUNCA al repo (es público).
+config.json
+
+# Estado, avisos, logs y maestros locales (datos reales de la red y de clientes).
+datos/*
+!datos/.gitkeep
+
+__pycache__/
+*.pyc
+*.log

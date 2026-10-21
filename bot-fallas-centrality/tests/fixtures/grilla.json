@@ -1,0 +1,55 @@
+{
+  "url": "https://centrality.ejemplo.invalid/bandeja",
+  "titulo": "Centrality (sintético)",
+  "grillas": [
+    {
+      "id": "gridpanel-12",
+      "titulo": "Bandeja de reclamos",
+      "columnas": [
+        {"dataIndex": "caso", "texto": "Caso"},
+        {"dataIndex": "direccion", "texto": "Dirección"},
+        {"dataIndex": "nis", "texto": "NIS"},
+        {"dataIndex": "cliente", "texto": "Cliente"},
+        {"dataIndex": "telefono", "texto": "Teléfono"},
+        {"dataIndex": "clientesAfectados", "texto": "Clientes afectados"},
+        {"dataIndex": "peligro", "texto": "Nivel de peligro"},
+        {"dataIndex": "enInterrupcion", "texto": "En interrupción"},
+        {"dataIndex": "area", "texto": "Área"},
+        {"dataIndex": "fechaCreacion", "texto": "Fecha"}
+      ],
+      "filas": [
+        {"Caso": "40877777", "Dirección": "AV. MATTA 1500, OSORNO", "NIS": 7000001,
+         "Cliente": "JUAN PRUEBA", "Teléfono": "+56 9 1111 1111", "Clientes afectados": 120,
+         "Nivel de peligro": "Sin peligro", "En interrupción": true, "Área": "OSORNO",
+         "Fecha": "2026-10-21 13:10:00", "id": "ext-record-1", "nombreCliente": "JUAN PRUEBA"},
+        {"Caso": "40877777", "Dirección": "BULNES 50, OSORNO", "NIS": 7000002,
+         "Cliente": "MARIA PRUEBA", "Teléfono": "+56 9 2222 2222", "Clientes afectados": 95,
+         "Nivel de peligro": "Con peligro", "En interrupción": false, "Área": "OSORNO",
+         "Fecha": "2026-10-21 13:20:00", "id": "ext-record-2", "nombreCliente": "MARIA PRUEBA"},
+        {"Caso": 40808515, "Dirección": "LOS CARRERA 1000, OSORNO", "NIS": "1000003",
+         "Cliente": "PEDRO PRUEBA", "Teléfono": "+56 9 3333 3333", "Clientes afectados": 1300,
+         "Nivel de peligro": "Sin peligro", "En interrupción": true, "Área": "OSORNO",
+         "Fecha": "2026-10-21 14:58:00", "id": "ext-record-3", "nombreCliente": "PEDRO PRUEBA"},
+        {"Caso": "", "Dirección": "BULNES 99, OSORNO", "NIS": 7000009,
+         "Cliente": "SIN CASO PRUEBA", "Teléfono": "+56 9 1313 1313", "Clientes afectados": 5,
+         "Nivel de peligro": "Sin peligro", "En interrupción": true, "Área": "OSORNO",
+         "Fecha": "2026-10-21 13:30:00", "id": "ext-record-4", "nombreCliente": "SIN CASO PRUEBA"}
+      ],
+      "total": 10,
+      "cargadas": 4
+    },
+    {
+      "id": "gridpanel-30",
+      "titulo": "Brigadas en turno",
+      "columnas": [
+        {"dataIndex": "brigada", "texto": "Brigada"},
+        {"dataIndex": "estado", "texto": "Estado"}
+      ],
+      "filas": [
+        {"Brigada": "BBOO 9001 PRUEBA", "Estado": "Disponible"}
+      ],
+      "total": 1,
+      "cargadas": 1
+    }
+  ]
+}

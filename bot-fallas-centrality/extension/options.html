@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="ui.css">
+<title>Bot de fallas · Configuración</title>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <img src="icon128.png" alt="">
+    <div><h1>Bot de fallas · Configuración</h1><div class="sub">Puente entre tu sesión de Centrality y el bot local</div></div>
+  </div>
+  <span id="estadoGuardado" class="pill">sin cambios</span>
+</header>
+
+<main class="page">
+  <div id="aviso"></div>
+
+  <section class="card">
+    <h2>Conexión</h2>
+    <div class="form-grid">
+      <div class="field" id="f-centralityBase">
+        <label for="centralityBase">Dirección base de Centrality</label>
+        <input id="centralityBase" type="url" placeholder="https://&lt;host&gt;:&lt;puerto&gt;" autocomplete="off" spellcheck="false">
+        <div class="hint">La misma con la que entras a Centrality (sólo protocolo, host y puerto). Al guardar, Chrome pide permiso para ese sitio: acéptalo.</div>
+      </div>
+      <div class="field" id="f-botUrl">
+        <label for="botUrl">URL del bot local</label>
+        <input id="botUrl" type="url" placeholder="http://127.0.0.1:8771" autocomplete="off" spellcheck="false">
+        <div class="hint">Sólo 127.0.0.1 o localhost por HTTP: el CSV crudo nunca sale del equipo.</div>
+      </div>
+      <div class="field" id="f-rutaReportes">
+        <label for="rutaReportes">Ruta de reportes</label>
+        <input id="rutaReportes" type="text" placeholder="/backend/saesa/reports.php" autocomplete="off" spellcheck="false">
+        <div class="hint">Se arma <span class="mono">base + ruta?id=N&amp;process=1&amp;…&amp;format=plaincsv</span>.</div>
+      </div>
+      <div class="field" id="f-token">
+        <label for="token">Token compartido (opcional)</label>
+        <input id="token" type="password" autocomplete="off" spellcheck="false">
+        <div class="hint">Igual a <span class="mono">servidor.token_compartido</span> del config.json del bot. Vacío si no se usa.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Operación</h2>
+    <div class="form-grid">
+      <div class="field" id="f-activo">
+        <label for="activo">Sincronización automática</label>
+        <select id="activo"><option value="true">Activada</option><option value="false">Pausada</option></select>
+      </div>
+      <div class="field" id="f-intervaloMin">
+        <label for="intervaloMin">Intervalo (minutos)</label>
+        <input id="intervaloMin" type="number" min="1" max="120" step="1">
+        <div class="hint">Recomendado: 5. Nunca se solapan corridas: si una tarda más, la siguiente se omite.</div>
+      </div>
+      <div class="field" id="f-ou">
+        <label for="ou">Unidad organizativa (OU)</label>
+        <input id="ou" type="text" inputmode="numeric" autocomplete="off">
+        <div class="hint">ID de la OU para <span class="mono">{ou}</span>. Usa la del CCD, no la raíz del grupo: con la raíz el 432 tarda ~75 s.</div>
+      </div>
+      <div class="field" id="f-timeoutS">
+        <label for="timeoutS">Tiempo máximo por reporte (segundos)</label>
+        <input id="timeoutS" type="number" min="30" max="240" step="10">
+        <div class="hint">Recomendado y máximo: 240. Chrome corta al service worker si espera más de 5 min.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Fuentes (reportes de Centrality)</h2>
+    <table>
+      <thead><tr><th>Fuente</th><th>Activa</th><th>ID reporte</th><th>Parámetros</th><th>Ventana (h)</th></tr></thead>
+      <tbody id="fuentes"></tbody>
+    </table>
+    <div class="tiny" style="margin-top:6px">
+      Variables: <span class="mono">{desde}</span> <span class="mono">{hasta}</span> (ventana en horas; 0 = sin ventana),
+      <span class="mono">{ou}</span>, <span class="mono">{hoy}</span>, <span class="mono">{ahora}</span>.
+      Ej.: <span class="mono">param_1={desde}&amp;param_2={hasta}&amp;param_3={ou}</span>.
+      Los ID del informe de casos y de reclamos no se conocen: usa «Descubrir reportes».
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Bandeja visible (grilla ExtJS)</h2>
+    <div class="form-grid">
+      <div class="field" id="f-capturarGrilla">
+        <label class="check"><input id="capturarGrilla" type="checkbox"> Capturar la grilla visible en cada ciclo</label>
+        <div class="hint">Lee la bandeja abierta en la pestaña (sin clics). Nunca sirve para dar una falla por normalizada.</div>
+      </div>
+      <div class="field" id="f-maxFilasGrilla">
+        <label for="maxFilasGrilla">Máximo de filas por grilla</label>
+        <input id="maxFilasGrilla" type="number" min="50" max="20000" step="50">
+      </div>
+    </div>
+  </section>
+
+  <div class="btns" style="margin-bottom:12px">
+    <button class="btn" id="guardar">Guardar</button>
+    <button class="btn ghost" id="descubrir">Descubrir reportes</button>
+  </div>
+
+  <section class="card oculto" id="cardDescubrir">
+    <h2>Reportes y OUs encontrados</h2>
+    <div id="descubrirMeta" class="tiny"></div>
+    <input id="filtro" class="filtro" type="text" placeholder="Filtrar por nombre o ID…" style="margin:8px 0">
+    <div class="form-grid">
+      <div>
+        <div class="field"><label>Reportes (ID · nombre)</label></div>
+        <div id="listaReportes" class="lista"></div>
+      </div>
+      <div>
+        <div class="field"><label>Unidades organizativas (ID · nombre)</label></div>
+        <div id="listaOus" class="lista"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Privacidad</h2>
+    <div class="tiny">
+      La extensión usa tu sesión abierta de Centrality y no guarda credenciales. Los reportes van sólo al bot
+      local (127.0.0.1); el bot reduce las direcciones a nombres de calle y conteos antes de avisar.
+    </div>
+  </section>
+</main>
+<script src="plantillas.js"></script>
+<script src="options.js"></script>
+</body>
+</html>
