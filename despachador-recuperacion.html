@@ -1,0 +1,1007 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}[hidden]{display:none!important}</style>
+<title>Despachador de Recuperación</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Tablero de despacho: esquema unifilar al centro, panel de maniobra y lógica debajo.
+   Misma familia visual que "Compuertas lógicas: material de estudio" (papel cuadriculado, tinta azul, ámbar = energizado). */
+*,*::before,*::after{box-sizing:border-box}
+:root{
+  --paper:#E7EBE2; --panel:#F6F8F2; --panel-2:#EDF0E7;
+  --ink:#15233B; --ink-2:#46566B; --ink-3:#66748A;
+  --line:#C4CCBF; --grid:rgba(21,35,59,.055);
+  --hi:#B06F00; --glow:#FFC53D; --glow-soft:rgba(255,197,61,.52); --lo:#8F9BA8;
+  --node-off:#E1E6DC;
+  --accent:#2346A0; --on-accent:#FFFFFF; --accent-soft:rgba(35,70,160,.10);
+  --ok:#23724A; --ok-soft:rgba(35,114,74,.14);
+  --bad:#B3302A; --bad-soft:rgba(179,48,42,.13);
+  --warn:#B45309; --warn-soft:rgba(180,83,9,.15);
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#0F1723; --panel:#162030; --panel-2:#1C283A;
+    --ink:#E6EBF2; --ink-2:#A6B3C4; --ink-3:#8C9AAE;
+    --line:#2B394E; --grid:rgba(230,235,242,.045);
+    --hi:#FFB61F; --glow:#FFC53D; --glow-soft:rgba(255,197,61,.30); --lo:#56657A;
+    --node-off:#1F2B3D;
+    --accent:#8DA8FF; --on-accent:#0E1624; --accent-soft:rgba(141,168,255,.14);
+    --ok:#5CC48C; --ok-soft:rgba(92,196,140,.16);
+    --bad:#F2786F; --bad-soft:rgba(242,120,111,.17);
+    --warn:#FFA24D; --warn-soft:rgba(255,162,77,.17);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#0F1723; --panel:#162030; --panel-2:#1C283A;
+  --ink:#E6EBF2; --ink-2:#A6B3C4; --ink-3:#8C9AAE;
+  --line:#2B394E; --grid:rgba(230,235,242,.045);
+  --hi:#FFB61F; --glow:#FFC53D; --glow-soft:rgba(255,197,61,.30); --lo:#56657A;
+  --node-off:#1F2B3D;
+  --accent:#8DA8FF; --on-accent:#0E1624; --accent-soft:rgba(141,168,255,.14);
+  --ok:#5CC48C; --ok-soft:rgba(92,196,140,.16);
+  --bad:#F2786F; --bad-soft:rgba(242,120,111,.17);
+  --warn:#FFA24D; --warn-soft:rgba(255,162,77,.17);
+}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.5;
+  background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;
+}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
+.wrap{
+  max-width:1120px;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:20px 56px;
+  display:flex;flex-direction:column;gap:16px;
+}
+.mono{font-family:var(--mono)}
+
+/* ---------- cabecera ---------- */
+.top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.top h1{margin:0;font-size:clamp(24px,5vw,34px);line-height:1.1;font-stretch:90%;font-weight:800;letter-spacing:-.01em;text-wrap:balance}
+.top p{margin:6px 0 0;color:var(--ink-2);max-width:60ch}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.btn{
+  border:1px solid var(--line);background:var(--panel);border-radius:8px;
+  padding:9px 14px;min-height:40px;font-weight:600;font-size:14px;
+}
+.btn:hover{border-color:var(--ink-3)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+
+/* ---------- selector de niveles ---------- */
+.levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.lv{
+  text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:8px;
+  padding:9px 12px;display:flex;flex-direction:column;gap:2px;min-width:0;
+}
+.lv .n{font-family:var(--mono);font-size:11px;color:var(--ink-3);letter-spacing:.08em;text-transform:uppercase;display:flex;justify-content:space-between;gap:8px}
+.lv .t{font-weight:700;font-size:14px;line-height:1.25}
+.lv[aria-current="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.stars{letter-spacing:.1em;color:var(--hi)}
+
+/* ---------- briefing ---------- */
+.brief{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;display:grid;gap:10px}
+.brief h2{margin:0;font-size:22px;line-height:1.2;font-stretch:92%;font-weight:800}
+.brief p{margin:0;max-width:78ch}
+.brief .goal{font-weight:600}
+.brief .goal span{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-right:8px}
+.hintbox{background:var(--warn-soft);border:1px solid var(--warn);border-radius:8px;padding:10px 12px;font-size:14px}
+.hintbox[hidden]{display:none}
+
+/* ---------- indicadores ---------- */
+.hud{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;display:flex;flex-direction:column;min-width:0}
+.tile .k{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.tile .v{font-size:26px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums;font-stretch:90%}
+.tile .u{font-size:12px;color:var(--ink-3)}
+.tile.bad .v{color:var(--bad)}
+
+/* ---------- esquema ---------- */
+.board{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.diagram{overflow-x:auto;padding:6px 4px}
+.swipe{display:none;margin:0;padding:8px 14px 0;font-size:12.5px;color:var(--ink-3)}
+@media (max-width:760px){.swipe{display:block}}
+.diagram svg{display:block;margin-inline:auto;height:auto;touch-action:manipulation}
+.status{
+  margin:0;padding:10px 14px;border-top:1px solid var(--line);font-size:14px;min-height:44px;
+  background:var(--panel-2);color:var(--ink-2);
+}
+.status.ok{background:var(--ok-soft);color:var(--ink)}
+.status.err{background:var(--bad-soft);color:var(--ink)}
+.status b{font-weight:700}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;padding:10px 14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend svg{width:30px;height:24px;flex:none}
+
+/* símbolos del esquema (también usados en la leyenda) */
+.wire{stroke-width:4.5;stroke-linecap:round;fill:none}
+.wire.on{stroke:var(--hi)}
+.wire.off{stroke:var(--lo)}
+.sec rect{stroke-width:2}
+.sec.on rect{fill:var(--glow-soft);stroke:var(--hi)}
+.sec.off rect{fill:var(--node-off);stroke:var(--lo)}
+.sec.fault rect{fill:var(--bad-soft);stroke:var(--bad);stroke-width:2.5}
+.sec{cursor:pointer}
+.sec.sel rect,.sec:focus-visible rect{stroke:var(--accent);stroke-width:3.5}
+.sec:focus,.dev:focus,.sec:focus-visible,.dev:focus-visible{outline:none}
+.t-name{font:700 14px var(--sans);fill:var(--ink)}
+.t-meta{font:500 10.5px var(--mono);fill:var(--ink-2)}
+.t-fault{font:800 10px var(--mono);fill:var(--bad);letter-spacing:.12em}
+.t-sub{font:500 10.5px var(--mono);fill:var(--ink-3)}
+.t-id{font:600 11.5px var(--mono);fill:var(--ink)}
+.t-op{font:500 10px var(--mono);fill:var(--ink-3)}
+.bolt{fill:var(--bad)}
+.src rect.box{fill:var(--panel-2);stroke:var(--ink-3);stroke-width:2}
+.meter-bg{fill:var(--line)}
+.meter-fg{fill:var(--ok)}
+.meter-fg.warn{fill:var(--warn)}
+.meter-fg.bad{fill:var(--bad)}
+.dev{cursor:pointer}
+.dev .sym{stroke:var(--ink);stroke-width:2.5;fill:var(--ink)}
+.dev.open .sym{fill:var(--panel)}
+.dev.tie.open .sym{stroke-dasharray:3 2.5}
+.dev.tripped .sym{stroke:var(--bad)}
+.dev.fixed{cursor:default;opacity:.6}
+.dev .ring{fill:none;stroke:var(--accent);stroke-width:3;opacity:0}
+.dev.sel .ring,.dev:focus-visible .ring{opacity:1}
+.dev .badge{fill:var(--bad)}
+.dev .badge-t{font:700 10px var(--mono);fill:#fff}
+.flag{fill:var(--warn)}
+.flash{animation:flash .7s ease-out 1}
+@keyframes flash{0%{background:var(--bad-soft)}100%{background:transparent}}
+@media (prefers-reduced-motion:reduce){.flash{animation:none}}
+
+/* ---------- paneles ---------- */
+.panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.panel h3{margin:0;font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.panel h4{margin:0;font-size:18px;font-weight:800;line-height:1.25}
+.panel p{margin:0;font-size:14.5px;color:var(--ink-2)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:14px}
+.kv dt{color:var(--ink-3);font-family:var(--mono);font-size:12px;padding-top:1px}
+.kv dd{margin:0}
+.pv{margin:0;padding:0;list-style:none;display:grid;gap:5px}
+.pv li{font-size:14px;padding:6px 10px;border-radius:6px;background:var(--panel-2);border:1px solid var(--line)}
+.pv li.ok{background:var(--ok-soft);border-color:transparent}
+.pv li.warn{background:var(--warn-soft);border-color:transparent}
+.pv li.bad{background:var(--bad-soft);border-color:transparent}
+.pvtoggle{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink-2)}
+.pvtoggle input{width:18px;height:18px;accent-color:var(--accent)}
+.formula{font-family:var(--mono);font-size:13.5px;line-height:2.15;overflow-wrap:anywhere}
+.lhs{font-weight:600;margin-right:4px}
+.chip{display:inline-block;padding:0 6px;border-radius:5px;margin:0 1px;line-height:1.7}
+.chip.c{background:var(--ok-soft);color:var(--ink)}
+.chip.o{background:var(--bad-soft);color:var(--ink);text-decoration:line-through;text-decoration-thickness:1.5px}
+.chip sub{font-size:9.5px;margin-left:2px;vertical-align:baseline;position:relative;top:3px;opacity:.8}
+.term{padding:1px 4px;border-radius:6px;border:1px dashed var(--line);white-space:normal}
+.term.on{border:1px solid var(--ok);background:var(--ok-soft)}
+.op{color:var(--ink-3);margin:0 3px}
+.res{font-weight:600;font-size:14.5px}
+.res.on{color:var(--ok)}
+.res.off{color:var(--bad)}
+.gatelegend{font-size:12.5px;color:var(--ink-3);margin:0}
+
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.log{margin:0;padding:0;list-style:none;display:grid;gap:4px;max-height:260px;overflow-y:auto;font-size:13.5px}
+.log li{display:grid;grid-template-columns:62px 1fr;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)}
+.log li .tm{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.log li.err{color:var(--bad)}
+.log li.ok{color:var(--ink)}
+.log li.info{color:var(--ink-2)}
+
+/* ---------- resultado ---------- */
+.result{background:var(--panel);border:2px solid var(--accent);border-radius:10px;padding:18px;display:grid;gap:14px}
+.result[hidden]{display:none}
+.result h2{margin:0;font-size:24px;font-weight:800;font-stretch:92%}
+.result .bigstars{font-size:34px;letter-spacing:.15em;color:var(--hi);line-height:1}
+.cmp{width:100%;border-collapse:collapse;font-size:14.5px}
+.cmp th,.cmp td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.cmp th{font-family:var(--mono);font-size:11.5px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.cmp td.num{font-family:var(--mono)}
+.cmp .tableWrap{overflow-x:auto}
+.result ol{margin:0;padding-left:22px;display:grid;gap:3px;font-size:14.5px}
+.result h3{margin:0;font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.result p{margin:0;max-width:78ch}
+.note{font-size:12.5px;color:var(--ink-3)}
+
+details.notes{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px}
+details.notes summary{cursor:pointer;font-weight:700}
+details.notes ul{margin:10px 0 0;padding-left:20px;display:grid;gap:5px;font-size:14.5px;color:var(--ink-2)}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Operación de distribución · ejercicio</div>
+      <h1>Despachador de recuperación</h1>
+      <p>Una falla dejó clientes sin servicio. Decide qué equipos abrir y cerrar, en qué orden, y de qué alimentador recuperar. Cada minuto con clientes afuera cuesta clientes-minuto.</p>
+    </div>
+    <button class="btn" id="themeBtn" type="button" aria-label="Cambiar entre tema claro y oscuro">Tema</button>
+  </header>
+
+  <nav class="levels" id="levels" aria-label="Niveles"></nav>
+
+  <section class="brief" aria-labelledby="lvTitle">
+    <div class="eyebrow" id="lvKicker"></div>
+    <h2 id="lvTitle"></h2>
+    <p id="lvStory"></p>
+    <p class="goal" id="lvGoal"></p>
+    <div class="hintbox" id="hintBox" hidden></div>
+  </section>
+
+  <section class="hud" aria-label="Indicadores">
+    <div class="tile"><span class="k">Reloj</span><span class="v" id="vT">0</span><span class="u">minutos desde el inicio</span></div>
+    <div class="tile" id="tOut"><span class="k">Sin servicio</span><span class="v" id="vOut">0</span><span class="u">clientes (incluye el tramo fallado)</span></div>
+    <div class="tile"><span class="k">Clientes-minuto</span><span class="v" id="vCmi">0</span><span class="u">acumulados por maniobra</span></div>
+    <div class="tile" id="tErr"><span class="k">Errores</span><span class="v" id="vErr">0</span><span class="u">cierres en falla, sobrecargas, paralelos</span></div>
+  </section>
+
+  <section class="board" aria-label="Esquema unifilar simplificado">
+    <p class="swipe">Desliza el esquema hacia los lados para verlo completo.</p>
+    <div class="diagram" id="diagram"><svg id="net" role="group" aria-label="Esquema unifilar simplificado de la red"></svg></div>
+    <p class="status" id="status" role="status" aria-live="polite">Toca un equipo para ver qué haría. Toca de nuevo para operarlo.</p>
+    <div class="legend" aria-label="Leyenda">
+      <span><svg viewBox="0 0 30 24"><g class="dev closed breaker"><rect class="sym" x="4" y="2" width="20" height="20" rx="3"/></g></svg>Interruptor / reconectador (cerrado) · interrumpe falla</span>
+      <span><svg viewBox="0 0 30 24"><g class="dev open switch tie"><circle class="sym" cx="15" cy="12" r="8"/></g></svg>Seccionador (abierto; discontinuo = NA) · no interrumpe falla</span>
+      <span><svg viewBox="0 0 30 24"><polygon class="flag" points="8,20 15,5 22,20"/></svg>Indicador de falla: por aquí pasó corriente de falla</span>
+      <span><svg viewBox="0 0 30 24"><circle class="badge" cx="15" cy="12" r="8" style="fill:var(--bad)"/><text x="15" y="16" text-anchor="middle" style="font:700 10px var(--mono);fill:#fff">1</text></svg>Disparó (número = orden)</span>
+      <span class="mono" style="font-size:12px">TC = telecontrol (1 min) · MAN = manual con brigada (15 min)</span>
+    </div>
+  </section>
+
+  <section class="panels">
+    <div class="panel" id="opPanel" aria-live="polite"></div>
+    <div class="panel" id="logicPanel"></div>
+  </section>
+
+  <section class="panel">
+    <h3>Acciones</h3>
+    <div class="actions">
+      <button class="btn primary" id="btnFinish" type="button">Dar por normalizado</button>
+      <button class="btn" id="btnPatrol" type="button">Despachar brigada a ubicar la falla (20 min)</button>
+      <button class="btn" id="btnHint" type="button">Pista</button>
+      <button class="btn" id="btnReset" type="button">Reiniciar nivel</button>
+      <button class="btn" id="btnNew" type="button" hidden>Nuevo escenario</button>
+    </div>
+    <h3>Bitácora</h3>
+    <ol class="log" id="log" aria-label="Bitácora de maniobras"></ol>
+  </section>
+
+  <section class="result" id="result" hidden aria-labelledby="resTitle"></section>
+
+  <details class="notes">
+    <summary>Qué simplifica este ejercicio</summary>
+    <ul>
+      <li>Hay una sola falla permanente. No se modelan recierres ni fallas transitorias.</li>
+      <li>Los tiempos son ilustrativos: 1 min por telecontrol, 15 min por maniobra manual (traslado de brigada) y 20 min por patrullaje.</li>
+      <li>Las cargas están en amperes ficticios. La capacidad es el límite de la cabecera. No se modelan caída de tensión, ajustes de protección ni carga fría (en la práctica la demanda sube al reenergizar).</li>
+      <li>Unir dos alimentadores energizados (paralelo) está bloqueado. En la operación real depende de tus procedimientos.</li>
+      <li>Un seccionador no interrumpe falla: si lo cierras sobre una falla, dispara el equipo de protección más cercano aguas arriba, con todos sus clientes.</li>
+      <li>El reloj solo avanza cuando operas. Pensar es gratis, operar cuesta.</li>
+      <li>La fórmula lógica de cada tramo mira solo conectividad: caminos de equipos cerrados hasta una fuente.</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+/* ===== ENGINE ===== */
+const ENGINE = (function(){
+  const T_TC = 1, T_MAN = 15, T_PATROL = 20;
+  const PROT = { breaker:true, recloser:true };
+  const SEC_W = 102, SEC_H = 48, SRC_W = 112, SRC_H = 62;
+  const XS = 154 / 144; /* escala horizontal de las coordenadas de los niveles (paso entre tramos = 154) */
+  const opTime = d => d.remote ? T_TC : T_MAN;
+
+  /* ---- red ---- */
+  function makeNet(L){
+    const net = {src:{}, sec:{}, dev:{}, pos:{}};
+    L.src.forEach(s => { net.src[s.id] = {id:s.id, name:s.name, sub:s.sub, cap:s.cap, head:s.head}; net.pos[s.id] = {x:s.x * XS, y:s.y, w:SRC_W, h:SRC_H, kind:'src'}; });
+    L.sec.forEach(s => { net.sec[s.id] = {id:s.id, cli:s.cli, amp:s.amp}; net.pos[s.id] = {x:s.x * XS, y:s.y, w:SEC_W, h:SEC_H, kind:'sec'}; });
+    L.dev.forEach(d => { net.dev[d.id] = Object.assign({type:'switch', remote:false, tie:false, open:false, fixed:false, fci:false}, d); });
+    return net;
+  }
+
+  /* energía = existe camino de equipos cerrados desde alguna fuente */
+  function reach(net, open){
+    const adj = {};
+    for (const id in net.dev){
+      if (open[id]) continue;
+      const d = net.dev[id];
+      (adj[d.a] = adj[d.a] || []).push({dev:id, to:d.b});
+      (adj[d.b] = adj[d.b] || []).push({dev:id, to:d.a});
+    }
+    const by = {}, parent = {};
+    for (const s in net.src){
+      const seen = {}; seen[s] = true;
+      const q = [s]; parent[s] = {};
+      while (q.length){
+        const n = q.shift();
+        for (const e of (adj[n] || [])){
+          if (seen[e.to]) continue;
+          seen[e.to] = true;
+          parent[s][e.to] = {dev:e.dev, from:n};
+          q.push(e.to);
+        }
+      }
+      for (const n in seen) (by[n] = by[n] || []).push(s);
+    }
+    return {by, parent};
+  }
+  function hasParallel(r){ for (const n in r.by) if (r.by[n].length > 1) return true; return false; }
+  function loads(net, r){
+    const L = {}; for (const s in net.src) L[s] = 0;
+    for (const id in net.sec){ const b = r.by[id]; if (b && b.length) L[b[0]] += net.sec[id].amp; }
+    return L;
+  }
+  function stats(net, faults, by){
+    let served = 0, out = 0, total = 0;
+    for (const id in net.sec){
+      const c = net.sec[id].cli; total += c;
+      if (by[id] && by[id].length) served += c; else if (!faults[id]) out += c;
+    }
+    return {served, out, total};
+  }
+
+  /* propaga: si hay falla energizada dispara la protección más cercana aguas arriba;
+     si una cabecera supera su capacidad, dispara la cabecera. Repite hasta estabilizar. */
+  function evaluate(net, openIn, faults){
+    const open = Object.assign({}, openIn);
+    const trips = [], passed = {};
+    for (let g = 0; g < 60; g++){
+      const r = reach(net, open);
+      let trip = null;
+      for (const f in faults){
+        const srcs = r.by[f];
+        if (!faults[f] || !srcs || !srcs.length) continue;
+        const s = srcs[0], chain = [];
+        let n = f;
+        while (n !== s){ const p = r.parent[s][n]; chain.push(p.dev); n = p.from; }
+        chain.forEach(dv => { passed[dv] = true; });
+        const pd = chain.find(dv => PROT[net.dev[dv].type]);
+        if (pd){ trip = {dev:pd, reason:'fault', sec:f}; break; }
+      }
+      if (!trip){
+        const L = loads(net, r);
+        for (const s in net.src){
+          if (L[s] > net.src[s].cap){ trip = {dev:net.src[s].head, reason:'overload', src:s, load:L[s]}; break; }
+        }
+      }
+      if (!trip) return {open, trips, passed, by:r.by, parent:r.parent, load:loads(net, r)};
+      open[trip.dev] = true; trips.push(trip);
+    }
+    throw new Error('evaluate no converge');
+  }
+
+  /* ---- niveles ---- */
+  const src = (id,name,sub,cap,head,x,y) => ({id,name,sub,cap,head,x,y});
+  const sec = (id,cli,amp,x,y) => ({id,cli,amp,x,y});
+  const dev = (id,a,b,type,remote,extra) => Object.assign({id,a,b,type,remote}, extra || {});
+
+  const LEVELS = [
+    { id:1, title:'Energía = camino', kicker:'Nivel 1 · lógica básica',
+      W:560, H:160, preview:true, selSec:'A3', hidden:false,
+      story:'Después de una maniobra programada, el alimentador AL-1 quedó sin tensión: la cabecera CAB1 y el seccionador S2 están abiertos.',
+      goal:'Energiza los tres tramos. Toca un tramo para ver su fórmula lógica.',
+      lesson:'Un tramo tiene tensión si existe al menos un camino de equipos cerrados hasta una fuente. Los equipos en serie son una compuerta AND: basta uno abierto para cortar el camino. Si hay caminos alternativos, se combinan con OR: basta uno alimentado.',
+      hints:['Toca A3: su fórmula es CAB1 ∧ S1 ∧ S2. Los tres factores deben valer 1.','Con la cabecera abierta no llega energía a ningún tramo. Parte por ahí.','A3 sigue sin tensión mientras S2 esté abierto.'],
+      src:[src('SE1','AL-1','SE Norte',200,'CAB1',56,80)],
+      sec:[sec('A1',120,30,211,80), sec('A2',90,26,355,80), sec('A3',70,22,499,80)],
+      dev:[dev('CAB1','SE1','A1','breaker',true,{fci:true}), dev('S1','A1','A2','switch',false), dev('S2','A2','A3','switch',false)],
+      startOpen:['CAB1','S2'], fault:null, revealed:true },
+
+    { id:2, title:'Aislar y reponer', kicker:'Nivel 2 · falla ubicada',
+      W:730, H:262, preview:true, hidden:false,
+      story:'Falla permanente en A2. Disparó la cabecera CAB1 y todo AL-1 quedó sin servicio. La brigada ya ubicó la falla.',
+      goal:'Recupera todos los clientes que se pueda sin cerrar sobre la falla: aísla A2, repón el lado fuente y el lado carga por el NA hacia AL-2.',
+      lesson:'Primero se aísla y después se repone. Los equipos de telecontrol (1 min) se operan mientras la brigada llega al manual (15 min): por eso conviene reponer por el NA el lado carga antes de esperar a S1. Si cierras CAB1 con S1 cerrado, el interruptor vuelve a disparar contra la falla.',
+      hints:['La falla está en A2. Sus bordes son S1 (lado fuente) y S2 (lado carga).','Mira el costo de cada equipo: S2 y el NA1 son TC (1 min); S1 es MAN (15 min).','Sin esperar a S1 puedes abrir S2 y cerrar NA1: A3 y A4 vuelven por AL-2. Después abres S1 y cierras CAB1.'],
+      src:[src('SE1','AL-1','SE Norte',200,'CAB1',56,70), src('SE2','AL-2','SE Centro',200,'CAB2',488,210)],
+      sec:[sec('A1',120,30,211,70), sec('A2',60,22,355,70), sec('A3',90,26,499,70), sec('A4',70,24,643,70), sec('B1',180,80,643,210)],
+      dev:[dev('CAB1','SE1','A1','breaker',true,{fci:true}), dev('S1','A1','A2','switch',false,{fci:true}), dev('S2','A2','A3','switch',true,{fci:true}), dev('S3','A3','A4','switch',false,{fci:true}),
+           dev('NA1','A4','B1','switch',true,{tie:true,open:true}), dev('CAB2','SE2','B1','breaker',true,{fixed:true})],
+      fault:'A2', revealed:true },
+
+    { id:3, title:'Capacidad justa', kicker:'Nivel 3 · límites de carga',
+      W:850, H:270, preview:true, hidden:false,
+      story:'Falla permanente en A2 (ubicada). Aguas abajo quedan A3, A4 y A5, con dos puntos NA: uno hacia AL-2 y otro hacia AL-3.',
+      goal:'Recupera todo lo recuperable. Ningún alimentador vecino tiene holgura para tomar la cola completa; mira la carga de cada cabecera.',
+      lesson:'Cuando un vecino no alcanza, se parte la cola con un punto de apertura nuevo (S4) y cada NA toma lo que le cabe: A3 y A4 por AL-2, A5 por AL-3. Cerrar un solo NA con S4 cerrado sobrecarga al vecino; cerrar los dos deja dos fuentes en paralelo.',
+      hints:['AL-2 tiene 62 A de holgura y AL-3 tiene 30 A. A3 + A4 + A5 suman 78 A.','Cerrar los dos NA con S4 cerrado une AL-2 y AL-3 en paralelo.','Abre S4: A3 y A4 por NA1 (AL-2), A5 por NA2 (AL-3). Para esperar a S4 (manual) puedes abrir S3 y restituir A3 antes.'],
+      src:[src('SE1','AL-1','SE Norte',200,'CAB1',56,70), src('SE2','AL-2','SE Centro',200,'CAB2',344,210), src('SE3','AL-3','SE Sur',120,'CAB3',632,210)],
+      sec:[sec('A1',130,34,211,70), sec('A2',60,22,355,70), sec('A3',85,26,499,70), sec('A4',95,30,643,70), sec('A5',70,22,787,70), sec('B1',160,138,499,210), sec('C1',140,90,787,210)],
+      dev:[dev('CAB1','SE1','A1','breaker',true,{fci:true}), dev('S1','A1','A2','switch',false,{fci:true}), dev('S2','A2','A3','switch',true,{fci:true}), dev('S3','A3','A4','switch',true,{fci:true}), dev('S4','A4','A5','switch',false,{fci:true}),
+           dev('NA1','A3','B1','switch',true,{tie:true,open:true}), dev('NA2','A5','C1','switch',true,{tie:true,open:true}),
+           dev('CAB2','SE2','B1','breaker',true,{fixed:true}), dev('CAB3','SE3','C1','breaker',true,{fixed:true})],
+      fault:'A2', revealed:true },
+
+    { id:4, title:'La cascada de hoy', kicker:'Nivel 4 · falla sin ubicar',
+      W:720, H:360, preview:false, hidden:true,
+      story:'Operaron tres reconectadores en fila, del más lejano al más cercano a la subestación: primero R3, luego R2 y luego R1. Hay clientes sin servicio desde A2 hacia abajo y nadie ha ubicado la falla.',
+      goal:'Usa los indicadores ▲ para acotar el tramo fallado, aíslalo y repón sin cerrar sobre la falla. La vista previa viene desactivada: puedes activarla en el panel de maniobra.',
+      lesson:'Los equipos con indicador vieron pasar la falla: ésta queda aguas abajo del último con marca y aguas arriba del primero sin marca (aquí A5, entre S4 y S5). Cerrar R3 sin abrir antes S4 devuelve la falla sobre el mismo equipo. El lateral X1 no era sospechoso: S6 no tenía marca.',
+      hints:['Los equipos con ▲ vieron pasar la falla. La falla está aguas abajo del último que tiene marca.','S4 tiene marca y S5 no: la falla está entre ambos, en A5.','Aísla A5 (S4 y S5, manuales) antes de cerrar R3 y el NA. Mientras tanto repón R1 y R2 por telecontrol.'],
+      src:[src('SE1','AL-1','SE Norte',200,'CAB1',56,70), src('SE2','AL-2','SE Centro',160,'CAB2',344,310)],
+      sec:[sec('A1',110,30,211,70), sec('A2',90,26,355,70), sec('A3',70,22,499,70), sec('A4',80,24,643,70), sec('X1',40,12,355,190), sec('A5',60,20,643,190), sec('A6',50,16,499,190), sec('B1',150,100,499,310)],
+      dev:[dev('CAB1','SE1','A1','breaker',true,{fci:true}), dev('R1','A1','A2','recloser',true,{fci:true}), dev('R2','A2','A3','recloser',true,{fci:true}), dev('R3','A3','A4','recloser',true,{fci:true}),
+           dev('S4','A4','A5','switch',false,{fci:true}), dev('S5','A5','A6','switch',false,{fci:true}), dev('S6','A2','X1','switch',false,{fci:true}),
+           dev('NA1','A6','B1','switch',true,{tie:true,open:true,lab:'l'}), dev('CAB2','SE2','B1','breaker',true,{fixed:true})],
+      fault:'A5', cascade:['R2','R1'], revealed:false },
+
+    { id:5, title:'Sin pistas', kicker:'Nivel 5 · escenario sorteado',
+      W:850, H:368, preview:false, hidden:true,
+      story:'Falla permanente en un tramo desconocido. Solo la cabecera y los reconectadores tienen indicador ▲. Cada partida sortea el tramo fallado; puedes pedir otro escenario.',
+      goal:'Acota con lo que ves, decide si patrullar o probar tramo a tramo, y recupera lo máximo posible. A veces no se puede recuperar todo.',
+      lesson:'Con información incompleta, el costo de equivocarse depende del equipo que cierras: un reconectador vuelve a disparar solo, un seccionador arrastra a la protección que tiene aguas arriba y apaga también lo que acababas de reponer. Por eso se prueba un tramo a la vez, dejándolo conectado solo a la protección que lo cubre.',
+      hints:['El reconectador que disparó y el siguiente sin marca delimitan la zona sospechosa: todos los tramos entre ambos.','Patrullar cuesta 20 minutos con todos los clientes afuera. Probar con un reconectador cuesta un error, pero ubica la falla.','Para probar un tramo, déjalo conectado solo al reconectador que lo protege: si falla, solo dispara ese equipo.'],
+      src:[src('SE1','AL-1','SE Norte',200,'CAB1',56,70), src('SE2','AL-2','SE Centro',170,'CAB2',787,317), src('SE3','AL-3','SE Sur',140,'CAB3',488,310)],
+      sec:[sec('A1',110,30,211,70), sec('A2',90,26,355,70), sec('A3',70,22,499,70), sec('A4',80,24,643,70), sec('A5',60,20,787,70),
+           sec('A6',40,12,499,190), sec('A7',30,10,643,190), sec('B1',150,120,787,190), sec('C1',120,100,643,310)],
+      dev:[dev('CAB1','SE1','A1','breaker',true,{fci:true}), dev('R1','A1','A2','recloser',true,{fci:true}), dev('R2','A2','A3','recloser',true,{fci:true}), dev('S3','A3','A4','switch',false),
+           dev('R3','A4','A5','recloser',true,{fci:true}), dev('S6','A3','A6','switch',false), dev('S7','A6','A7','switch',false),
+           dev('NA1','A5','B1','switch',true,{tie:true,open:true}), dev('NA2','A7','C1','switch',true,{tie:true,open:true}),
+           dev('CAB2','SE2','B1','breaker',true,{fixed:true}), dev('CAB3','SE3','C1','breaker',true,{fixed:true})],
+      faultPool:['A2','A3','A4','A6','A7'], revealed:false }
+  ];
+
+  /* ---- estado inicial de un nivel ---- */
+  function setup(L, faultId){
+    const net = makeNet(L);
+    const open = {};
+    for (const id in net.dev) open[id] = !!net.dev[id].open;
+    (L.startOpen || []).forEach(id => { open[id] = true; });
+    const fid = faultId || L.fault || null;
+    const faults = fid ? {[fid]:true} : {};
+    const res = evaluate(net, open, faults);
+    const tripped = {}; let seq = 0;
+    res.trips.forEach(t => { tripped[t.dev] = ++seq; });
+    const o2 = Object.assign({}, res.open);
+    (L.cascade || []).forEach(id => { if (!o2[id]){ o2[id] = true; tripped[id] = ++seq; } });
+    return { net, st:{ open:o2, tripped, seq, passed:Object.assign({}, res.passed), faults, faultId:fid,
+      revealed: !!L.revealed, t:0, cmi:0, errors:0, ops:0, patrols:0, hints:0, done:false } };
+  }
+
+  /* ---- operar un equipo ---- */
+  function applyToggle(net, st, id){
+    const d = net.dev[id];
+    const closing = !!st.open[id];
+    const open2 = Object.assign({}, st.open); open2[id] = !closing;
+    const before = evaluate(net, st.open, st.faults);
+    const bs = stats(net, st.faults, before.by);
+    if (closing && hasParallel(reach(net, open2)))
+      return {blocked:true, kind:'err', msg:'Cerrar ' + id + ' uniría dos alimentadores energizados (paralelo). En este ejercicio está bloqueado.'};
+    const res = evaluate(net, open2, st.faults);
+    const dt = opTime(d);
+    st.t += dt; st.cmi += dt * bs.out; st.ops++;
+    st.open = res.open;
+    if (closing) delete st.tripped[id];
+    Object.assign(st.passed, res.passed);
+    const parts = [];
+    let err = false;
+    res.trips.forEach(tp => {
+      st.tripped[tp.dev] = ++st.seq; err = true;
+      if (tp.reason === 'fault')
+        parts.push(tp.dev === id ? id + ' volvió a disparar: cerraste sobre la falla.' : 'Cerraste sobre la falla: disparó ' + tp.dev + ' aguas arriba.');
+      else
+        parts.push('Sobrecarga en ' + net.src[tp.src].name + ' (' + tp.load + ' A de ' + net.src[tp.src].cap + ' A): disparó ' + tp.dev + '.');
+    });
+    if (err) st.errors++;
+    const after = evaluate(net, st.open, st.faults);
+    const gained = [], lost = [];
+    for (const s in net.sec){
+      const a = !!(before.by[s] && before.by[s].length), b = !!(after.by[s] && after.by[s].length);
+      if (!a && b) gained.push(s); if (a && !b) lost.push(s);
+    }
+    let head = (closing ? 'Cerraste ' : 'Abriste ') + id + ' (' + dt + ' min).';
+    if (gained.length) head += ' Energiza ' + gained.join(', ') + '.';
+    if (lost.length) head += ' Sin servicio: ' + lost.join(', ') + '.';
+    return {blocked:false, kind: err ? 'err' : 'ok', msg:[head].concat(parts).join(' '), dt, trips:res.trips};
+  }
+
+  /* ---- óptimo: Dijkstra sobre configuraciones estables ---- */
+  class Heap{
+    constructor(){ this.a = []; }
+    get size(){ return this.a.length; }
+    push(x){ const a = this.a; a.push(x); let i = a.length - 1;
+      while (i > 0){ const p = (i - 1) >> 1; if (a[p][0] <= a[i][0]) break; [a[p], a[i]] = [a[i], a[p]]; i = p; } }
+    pop(){ const a = this.a, top = a[0], last = a.pop();
+      if (a.length){ a[0] = last; let i = 0;
+        for (;;){ const l = 2*i + 1, r = l + 1; let m = i;
+          if (l < a.length && a[l][0] < a[m][0]) m = l;
+          if (r < a.length && a[r][0] < a[m][0]) m = r;
+          if (m === i) break; [a[m], a[i]] = [a[i], a[m]]; i = m; } }
+      return top; }
+  }
+  function solve(net, st0){
+    const ids = Object.keys(net.dev).filter(i => !net.dev[i].fixed);
+    const n = ids.length;
+    const fixedOpen = {};
+    for (const id in net.dev) if (net.dev[id].fixed) fixedOpen[id] = !!st0.open[id];
+    const toOpen = m => { const o = Object.assign({}, fixedOpen); ids.forEach((id, i) => { o[id] = !!((m >> i) & 1); }); return o; };
+    const cache = new Map();
+    const info = m => {
+      let v = cache.get(m);
+      if (!v){
+        const o = toOpen(m);
+        v = {valid:false, served:0, out:0};
+        if (!hasParallel(reach(net, o))){
+          const res = evaluate(net, o, st0.faults);
+          if (res.trips.length === 0){ const s = stats(net, st0.faults, res.by); v = {valid:true, served:s.served, out:s.out}; }
+        }
+        cache.set(m, v);
+      }
+      return v;
+    };
+    let start = 0; ids.forEach((id, i) => { if (st0.open[id]) start |= (1 << i); });
+    const size = 1 << n;
+    const dist = new Float64Array(size).fill(Infinity), prev = new Int32Array(size).fill(-1), tm = new Float64Array(size).fill(0);
+    dist[start] = 0;
+    const hp = new Heap(); hp.push([0, start]);
+    const done = new Uint8Array(size);
+    while (hp.size){
+      const [d0, m] = hp.pop();
+      if (done[m]) continue; done[m] = 1;
+      const base = info(m);
+      for (let i = 0; i < n; i++){
+        const m2 = m ^ (1 << i);
+        if (done[m2]) continue;
+        const v2 = info(m2);
+        if (!v2.valid) continue;
+        const t = opTime(net.dev[ids[i]]);
+        const c = d0 + t * base.out;
+        if (c < dist[m2]){ dist[m2] = c; prev[m2] = m; tm[m2] = tm[m] + t; hp.push([c, m2]); }
+      }
+    }
+    let maxServed = -1;
+    for (let m = 0; m < size; m++) if (dist[m] < Infinity){ const v = info(m); if (v.valid && v.served > maxServed) maxServed = v.served; }
+    let best = -1, bestC = Infinity;
+    for (let m = 0; m < size; m++) if (dist[m] < Infinity && info(m).valid && info(m).served === maxServed){
+      if (dist[m] < bestC || (dist[m] === bestC && tm[m] < tm[best])){ bestC = dist[m]; best = m; } }
+    const path = [];
+    for (let m = best; m !== start; m = prev[m]){
+      const pm = prev[m], diff = m ^ pm; let i = 0; while (!((diff >> i) & 1)) i++;
+      path.push({dev:ids[i], closing:!!((pm >> i) & 1), dt:opTime(net.dev[ids[i]])});
+    }
+    path.reverse();
+    return {maxServed, startServed: info(start).served, par: bestC, parTime: tm[best], path, total: stats(net, st0.faults, evaluate(net, toOpen(start), st0.faults).by).total};
+  }
+
+  /* ---- fórmula lógica de un tramo ---- */
+  function pathsTo(net, target){
+    const adj = {};
+    for (const id in net.dev){ const d = net.dev[id];
+      (adj[d.a] = adj[d.a] || []).push({dev:id, to:d.b});
+      (adj[d.b] = adj[d.b] || []).push({dev:id, to:d.a}); }
+    const out = [];
+    for (const s in net.src){
+      const seen = new Set([s]);
+      (function dfs(n, devs){
+        if (n === target){ out.push({src:s, devs:devs.slice()}); return; }
+        for (const e of (adj[n] || [])){
+          if (seen.has(e.to) || net.src[e.to]) continue;
+          seen.add(e.to); devs.push(e.dev); dfs(e.to, devs); devs.pop(); seen.delete(e.to);
+        }
+      })(s, []);
+    }
+    return out.sort((p, q) => p.devs.length - q.devs.length);
+  }
+
+  return { T_TC, T_MAN, T_PATROL, PROT, LEVELS, XS, makeNet, reach, hasParallel, loads, stats, evaluate, setup, applyToggle, solve, pathsTo, opTime };
+})();
+
+/* ===== UI ===== */
+(function(){
+  const E = ENGINE;
+  const $ = id => document.getElementById(id);
+  const fmt = n => Math.round(n).toLocaleString('es-CL');
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const cur = { li:0, L:null, net:null, st:null, solved:null, sel:null, selSec:null, preview:true, hintN:0, faultId:null, log:[], status:null };
+
+  /* --- almacenamiento opcional --- */
+  const store = {
+    get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
+    set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+  };
+  let bestStars = store.get('despachador-stars', {});
+
+  /* --- tema --- */
+  function effectiveDark(){
+    const t = document.documentElement.getAttribute('data-theme');
+    if (t) return t === 'dark';
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  const savedTheme = store.get('despachador-theme', null);
+  if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+  $('themeBtn').addEventListener('click', () => {
+    const next = effectiveDark() ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    store.set('despachador-theme', next);
+  });
+
+  /* --- niveles --- */
+  function starStr(n){ return '★'.repeat(n) + '☆'.repeat(3 - n); }
+  function renderLevels(){
+    const nav = $('levels'); nav.innerHTML = '';
+    E.LEVELS.forEach((L, i) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'lv';
+      if (i === cur.li) b.setAttribute('aria-current', 'true');
+      const s = bestStars[L.id] || 0;
+      b.innerHTML = '<span class="n"><span>Nivel ' + L.id + '</span><span class="stars" aria-label="' + s + ' de 3 estrellas">' + starStr(s) + '</span></span><span class="t">' + L.title + '</span>';
+      b.addEventListener('click', () => loadLevel(i));
+      nav.appendChild(b);
+    });
+  }
+
+  function loadLevel(i, keepFault){
+    cur.li = i; cur.L = E.LEVELS[i];
+    if (!keepFault || !cur.faultId){
+      if (cur.L.faultPool){
+        const pool = cur.L.faultPool.filter(f => f !== cur.faultId);
+        cur.faultId = pool[Math.floor(Math.random() * pool.length)];
+      } else cur.faultId = cur.L.fault;
+    }
+    const s = E.setup(cur.L, cur.faultId);
+    cur.net = s.net; cur.st = s.st;
+    cur.solved = E.solve(cur.net, cur.st);
+    cur.sel = null; cur.selSec = cur.L.selSec || null;
+    cur.preview = cur.L.preview; cur.hintN = 0; cur.log = [];
+    cur.status = {kind:'', msg:'Toca un equipo para ver qué haría. Toca de nuevo para operarlo.'};
+    log('Inicio del ejercicio.', 'info');
+    $('result').hidden = true;
+    $('hintBox').hidden = true;
+    $('lvKicker').textContent = cur.L.kicker;
+    $('lvTitle').textContent = cur.L.title;
+    $('lvStory').textContent = cur.L.story;
+    $('lvGoal').innerHTML = '<span>Objetivo</span>' + cur.L.goal;
+    $('btnNew').hidden = !cur.L.faultPool;
+    renderLevels();
+    renderAll();
+  }
+
+  /* --- bitácora y estado --- */
+  function log(msg, kind){
+    cur.log.unshift({t: cur.st ? cur.st.t : 0, msg, kind: kind || 'info'});
+    if (cur.log.length > 80) cur.log.pop();
+  }
+  function setStatus(kind, msg){ cur.status = {kind, msg}; }
+
+  /* --- geometría --- */
+  function exitPt(P, dx, dy){
+    const hw = P.w / 2 + 1, hh = P.h / 2 + 1;
+    const t = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity);
+    return {x: P.x + dx * t, y: P.y + dy * t};
+  }
+  const TYPE_NAME = {breaker:'Interruptor de cabecera', recloser:'Reconectador', switch:'Seccionador'};
+  function devTitle(d){ return d.tie ? 'Seccionador NA (punto de enlace)' : TYPE_NAME[d.type]; }
+
+  /* --- esquema --- */
+  function renderSVG(){
+    const {net, st, L} = cur;
+    const res = E.evaluate(net, st.open, st.faults);
+    const by = res.by;
+    const on = id => !!(by[id] && by[id].length);
+    const live = id => net.src[id] ? true : on(id);
+    const WV = Math.round(L.W * E.XS);
+    let wires = '', nodes = '', devs = '';
+
+    for (const id in net.dev){
+      const d = net.dev[id], A = net.pos[d.a], B = net.pos[d.b];
+      const dx = B.x - A.x, dy = B.y - A.y;
+      const pa = exitPt(A, dx, dy), pb = exitPt(B, -dx, -dy);
+      const M = {x:(pa.x + pb.x) / 2, y:(pa.y + pb.y) / 2};
+      const vertical = Math.abs(dy) > Math.abs(dx);
+      wires += '<line class="wire ' + (live(d.a) ? 'on' : 'off') + '" x1="' + pa.x + '" y1="' + pa.y + '" x2="' + M.x + '" y2="' + M.y + '"/>';
+      wires += '<line class="wire ' + (live(d.b) ? 'on' : 'off') + '" x1="' + pb.x + '" y1="' + pb.y + '" x2="' + M.x + '" y2="' + M.y + '"/>';
+
+      const isOpen = !!st.open[id];
+      const cls = ['dev', isOpen ? 'open' : 'closed', d.type, d.tie ? 'tie' : '', st.tripped[id] ? 'tripped' : '', cur.sel === id ? 'sel' : '', d.fixed ? 'fixed' : ''].join(' ');
+      let sym;
+      if (d.type === 'switch') sym = '<circle class="sym" cx="' + M.x + '" cy="' + M.y + '" r="9.5"/>';
+      else if (d.type === 'recloser') sym = '<rect class="sym" x="' + (M.x - 10) + '" y="' + (M.y - 10) + '" width="20" height="20" rx="3"/>';
+      else sym = '<rect class="sym" x="' + (M.x - 13) + '" y="' + (M.y - 13) + '" width="26" height="26" rx="3"/>';
+      const flag = (d.fci && st.passed[id]) ? '<polygon class="flag" points="' + (M.x - 18) + ',' + (M.y - 3) + ' ' + (M.x - 12) + ',' + (M.y - 15) + ' ' + (M.x - 6) + ',' + (M.y - 3) + '"><title>Pasó corriente de falla</title></polygon>' : '';
+      const badge = st.tripped[id] ? '<circle class="badge" cx="' + (M.x + 14) + '" cy="' + (M.y - 13) + '" r="8"/><text class="badge-t" x="' + (M.x + 14) + '" y="' + (M.y - 9.5) + '" text-anchor="middle">' + st.tripped[id] + '</text>' : '';
+      const opTxt = d.fixed ? 'fijo' : (d.remote ? 'TC · ' + E.T_TC + ' min' : 'MAN · ' + E.T_MAN + ' min');
+      let label;
+      if (vertical){
+        const right = d.lab === 'l' ? false : d.lab === 'r' ? true : M.x + 26 + 82 <= WV;
+        const lx = right ? M.x + 26 : M.x - 26, an = right ? 'start' : 'end';
+        label = '<text class="t-id" x="' + lx + '" y="' + (M.y - 4) + '" text-anchor="' + an + '">' + id + '</text><text class="t-op" x="' + lx + '" y="' + (M.y + 12) + '" text-anchor="' + an + '">' + opTxt + '</text>';
+      } else {
+        label = '<text class="t-id" x="' + M.x + '" y="' + (M.y - 27) + '" text-anchor="middle">' + id + '</text><text class="t-op" x="' + M.x + '" y="' + (M.y + 43) + '" text-anchor="middle">' + opTxt + '</text>';
+      }
+      const aria = devTitle(d) + ' ' + id + ', ' + (isOpen ? 'abierto' : 'cerrado') + (st.tripped[id] ? ', disparó' : '') + ', ' + (d.fixed ? 'no operable' : (d.remote ? 'telecontrol' : 'manual'));
+      devs += '<g class="' + cls + '" data-dev="' + id + '" tabindex="0" role="button" aria-label="' + aria + '">' +
+        '<circle class="hit" cx="' + M.x + '" cy="' + M.y + '" r="23" fill="transparent"/>' +
+        '<circle class="ring" cx="' + M.x + '" cy="' + M.y + '" r="20"/>' + sym + flag + badge + label + '</g>';
+    }
+
+    for (const id in net.src){
+      const P = net.pos[id], s = net.src[id], ld = res.load[id];
+      const pct = ld / s.cap, bw = 84;
+      const mcls = pct > 1 ? 'bad' : pct > .85 ? 'warn' : '';
+      nodes += '<g class="src" aria-label="Alimentador ' + s.name + ', ' + ld + ' de ' + s.cap + ' amperes">' +
+        '<rect class="box" x="' + (P.x - P.w / 2) + '" y="' + (P.y - P.h / 2) + '" width="' + P.w + '" height="' + P.h + '" rx="7"/>' +
+        '<text class="t-name" x="' + P.x + '" y="' + (P.y - 17) + '" text-anchor="middle">' + s.name + '</text>' +
+        '<text class="t-sub" x="' + P.x + '" y="' + (P.y - 5) + '" text-anchor="middle">' + s.sub + '</text>' +
+        '<rect class="meter-bg" x="' + (P.x - bw / 2) + '" y="' + (P.y + 3) + '" width="' + bw + '" height="7" rx="3.5"/>' +
+        '<rect class="meter-fg ' + mcls + '" x="' + (P.x - bw / 2) + '" y="' + (P.y + 3) + '" width="' + Math.min(bw, bw * pct) + '" height="7" rx="3.5"/>' +
+        '<text class="t-meta" x="' + P.x + '" y="' + (P.y + 24) + '" text-anchor="middle">' + ld + ' / ' + s.cap + ' A</text></g>';
+    }
+    for (const id in net.sec){
+      const P = net.pos[id], s = net.sec[id];
+      const fv = st.faults[id] && st.revealed;
+      const cls = 'sec ' + (fv ? 'fault' : on(id) ? 'on' : 'off') + (cur.selSec === id ? ' sel' : '');
+      const bolt = fv ? '<path class="bolt" transform="translate(' + (P.x + P.w / 2 - 9) + ',' + (P.y - P.h / 2 + 4) + ') scale(.9)" d="M2 -2 L-5 8 L-1 8 L-3 16 L5 4 L1 4 Z"/>' : '';
+      nodes += '<g class="' + cls + '" data-sec="' + id + '" tabindex="0" role="button" aria-label="Tramo ' + id + ', ' + s.cli + ' clientes, ' + s.amp + ' amperes, ' + (fv ? 'con falla' : on(id) ? 'con servicio' : 'sin servicio') + '">' +
+        '<rect x="' + (P.x - P.w / 2) + '" y="' + (P.y - P.h / 2) + '" width="' + P.w + '" height="' + P.h + '" rx="7"/>' +
+        '<text class="t-name" x="' + P.x + '" y="' + (P.y + (fv ? -9 : -3)) + '" text-anchor="middle">' + id + '</text>' +
+        (fv ? '<text class="t-fault" x="' + P.x + '" y="' + (P.y + 4) + '" text-anchor="middle">FALLA</text>' : '') +
+        '<text class="t-meta" x="' + P.x + '" y="' + (P.y + (fv ? 17 : 14)) + '" text-anchor="middle">' + s.cli + ' cli · ' + s.amp + ' A</text>' + bolt + '</g>';
+    }
+    const svg = $('net');
+    const active = document.activeElement;
+    const key = active && svg.contains(active) ? (active.dataset.dev ? 'dev' : 'sec') + ':' + (active.dataset.dev || active.dataset.sec) : null;
+    svg.setAttribute('viewBox', '0 0 ' + WV + ' ' + L.H);
+    svg.style.width = '100%';
+    svg.style.minWidth = Math.min(WV, 720) + 'px';
+    svg.style.maxWidth = Math.round(WV * 1.35) + 'px';
+    svg.innerHTML = wires + nodes + devs;
+    if (key){
+      const [k, id] = key.split(':');
+      const el = svg.querySelector('[data-' + (k === 'dev' ? 'dev' : 'sec') + '="' + id + '"]');
+      if (el) el.focus({preventScroll:true});
+    }
+    return {res, by};
+  }
+
+  /* --- indicadores --- */
+  function renderHUD(res){
+    const {net, st} = cur;
+    const s = E.stats(net, st.faults, res.by);
+    $('vT').textContent = st.t;
+    $('vOut').textContent = fmt(s.total - s.served);
+    $('vCmi').textContent = fmt(st.cmi);
+    $('vErr').textContent = st.errors;
+    $('tErr').classList.toggle('bad', st.errors > 0);
+  }
+
+  /* --- panel de maniobra --- */
+  function preview(id){
+    const {net, st} = cur;
+    const d = net.dev[id], closing = !!st.open[id];
+    const open2 = Object.assign({}, st.open); open2[id] = !closing;
+    const items = [];
+    const r1 = E.reach(net, open2);
+    if (closing && E.hasParallel(r1)){
+      items.push({k:'bad', t:'Une dos alimentadores energizados (paralelo): bloqueado en este ejercicio.'});
+      return items;
+    }
+    const now = E.evaluate(net, st.open, st.faults);
+    const vf = st.revealed ? st.faults : {};
+    const next = E.evaluate(net, open2, vf);
+    const gained = [], lost = []; let cg = 0, cl = 0;
+    for (const s in net.sec){
+      const a = !!(now.by[s] && now.by[s].length), b = !!(next.by[s] && next.by[s].length);
+      if (!a && b){ gained.push(s); cg += net.sec[s].cli; }
+      if (a && !b){ lost.push(s); cl += net.sec[s].cli; }
+    }
+    if (gained.length) items.push({k:'ok', t:'Energiza ' + gained.join(', ') + ' (+' + fmt(cg) + ' clientes).'});
+    if (lost.length) items.push({k:'warn', t:'Deja sin servicio ' + lost.join(', ') + ' (−' + fmt(cl) + ' clientes).'});
+    const L0 = E.loads(net, now), L1 = E.loads(net, r1);
+    for (const s in net.src){
+      if (L0[s] !== L1[s]){
+        const p = Math.round(100 * L1[s] / net.src[s].cap);
+        items.push({k: p > 100 ? 'bad' : p > 85 ? 'warn' : 'info', t: net.src[s].name + ': ' + L0[s] + ' → ' + L1[s] + ' A (' + p + ' % de ' + net.src[s].cap + ' A).' + (p > 100 ? ' Sobrecarga: dispara su cabecera.' : '')});
+      }
+    }
+    next.trips.forEach(tp => {
+      if (tp.reason === 'fault') items.push({k:'bad', t:'Cierra sobre la falla ubicada: dispara ' + tp.dev + '.'});
+    });
+    if (!items.length) items.push({k:'info', t:'No cambia el estado de ningún tramo.'});
+    return items;
+  }
+  function renderOp(){
+    const {net, st} = cur, box = $('opPanel');
+    const id = cur.sel;
+    if (!id){
+      box.innerHTML = '<h3>Maniobra</h3><p>Toca un equipo del esquema. Verás su tipo, cuánto tarda y, si la vista previa está activa, qué pasaría. Toca el mismo equipo otra vez para operarlo.</p>' +
+        '<label class="pvtoggle"><input type="checkbox" id="pvChk" ' + (cur.preview ? 'checked' : '') + '> Vista previa de maniobra</label>';
+      bindPv(); return;
+    }
+    const d = net.dev[id], isOpen = !!st.open[id];
+    const prot = E.PROT[d.type];
+    let html = '<h3>Maniobra</h3><h4>' + id + ' · ' + devTitle(d) + '</h4><dl class="kv">' +
+      '<dt>Estado</dt><dd>' + (isOpen ? 'Abierto' : 'Cerrado') + (st.tripped[id] ? ' · disparó (' + st.tripped[id] + '°)' : '') + '</dd>' +
+      '<dt>Operación</dt><dd>' + (d.fixed ? 'No operable en este ejercicio' : d.remote ? 'Telecontrol · ' + E.T_TC + ' min' : 'Manual con brigada · ' + E.T_MAN + ' min') + '</dd>' +
+      '<dt>Falla</dt><dd>' + (prot ? 'Interrumpe corriente de falla' : 'No interrumpe falla: al cerrarlo sobre una falla dispara la protección aguas arriba') + '</dd>' +
+      '<dt>Indicador</dt><dd>' + (d.fci ? (st.passed[id] ? '▲ Marcado: pasó corriente de falla' : 'Sin marca') : 'Este equipo no tiene indicador') + '</dd></dl>';
+    if (d.fixed){
+      html += '<p>Cabecera de un alimentador sano. Se deja cerrada para que sirva de fuente.</p>';
+    } else {
+      if (cur.preview){
+        html += '<ul class="pv">' + preview(id).map(i => '<li class="' + i.k + '">' + i.t + '</li>').join('') + '</ul>';
+      }
+      html += '<div class="actions"><button class="btn primary" id="btnOp" type="button"' + (st.done ? ' disabled' : '') + '>' + (isOpen ? 'Cerrar ' : 'Abrir ') + id + '</button></div>';
+    }
+    html += '<label class="pvtoggle"><input type="checkbox" id="pvChk" ' + (cur.preview ? 'checked' : '') + '> Vista previa de maniobra</label>';
+    box.innerHTML = html;
+    const b = $('btnOp'); if (b) b.addEventListener('click', () => operate(id));
+    bindPv();
+  }
+  function bindPv(){
+    const c = $('pvChk');
+    if (c) c.addEventListener('change', () => { cur.preview = c.checked; renderOp(); });
+  }
+
+  /* --- panel de lógica --- */
+  function renderLogic(res){
+    const {net, st} = cur, box = $('logicPanel');
+    const id = cur.selSec;
+    if (!id){
+      box.innerHTML = '<h3>Lógica del tramo</h3><p>Toca un tramo para ver su fórmula: los equipos de cada camino van en AND y los caminos alternativos en OR.</p>';
+      return;
+    }
+    const paths = E.pathsTo(net, id);
+    const MAX = 5;
+    const terms = paths.slice(0, MAX).map(p => {
+      const closed = p.devs.every(dv => !st.open[dv]);
+      const chips = p.devs.map(dv => '<span class="chip ' + (st.open[dv] ? 'o' : 'c') + '">' + dv + '<sub>' + (st.open[dv] ? 0 : 1) + '</sub></span>').join('<span class="op">∧</span>');
+      return '<span class="term ' + (closed ? 'on' : '') + '">' + chips + '</span>';
+    });
+    const energized = res.by[id] && res.by[id].length;
+    const by = energized ? net.src[res.by[id][0]].name : null;
+    const s = net.sec[id];
+    box.innerHTML = '<h3>Lógica del tramo</h3>' +
+      '<div class="formula"><span class="lhs">' + id + ' =</span> ' + (terms.join('<span class="op">∨</span>') || '(sin caminos)') + (paths.length > MAX ? ' <span class="op">∨ …</span>' : '') + '</div>' +
+      '<p class="res ' + (energized ? 'on' : 'off') + '">' + id + ' = ' + (energized ? '1 · energizado desde ' + by : '0 · sin tensión') + '</p>' +
+      '<p>' + fmt(s.cli) + ' clientes · ' + s.amp + ' A.</p>' +
+      '<p class="gatelegend">∧ = AND (compuerta en serie): todos los equipos del camino deben valer 1 (cerrado). ∨ = OR: basta un camino alimentado. Verde = equipo cerrado (1); tachado = abierto (0).</p>';
+  }
+
+  /* --- bitácora --- */
+  function renderLog(){
+    $('log').innerHTML = cur.log.map(e => '<li class="' + e.kind + '"><span class="tm">+' + e.t + ' min</span><span>' + e.msg + '</span></li>').join('');
+  }
+  function renderStatus(){
+    const s = $('status'); s.className = 'status ' + (cur.status.kind || ''); s.textContent = cur.status.msg;
+  }
+  function renderButtons(){
+    const st = cur.st;
+    $('btnPatrol').hidden = !Object.keys(st.faults).length || st.revealed;
+    $('btnPatrol').disabled = st.done;
+    $('btnFinish').disabled = st.done;
+    $('btnHint').disabled = st.done;
+  }
+  function renderAll(){
+    const r = renderSVG();
+    renderHUD(r.res); renderOp(); renderLogic(r.res); renderLog(); renderStatus(); renderButtons();
+  }
+
+  /* --- acciones --- */
+  function operate(id){
+    const {net, st} = cur;
+    if (st.done) return;
+    const d = net.dev[id];
+    if (d.fixed){ setStatus('', id + ' es la cabecera de un alimentador sano y no se opera en este ejercicio.'); renderStatus(); return; }
+    const out = E.applyToggle(net, st, id);
+    if (out.blocked){ st.errors++; log(out.msg, 'err'); setStatus('err', out.msg); }
+    else { log(out.msg, out.kind); setStatus(out.kind, out.msg); }
+    renderAll();
+    if (out.kind === 'err'){ const b = document.querySelector('.board'); b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash'); }
+  }
+  function selectDev(id){
+    const d = cur.net.dev[id];
+    if (cur.sel === id && !d.fixed && !cur.st.done){ operate(id); return; }
+    cur.sel = id;
+    if (d.fixed) setStatus('', id + ': cabecera de alimentador sano, no se opera en este ejercicio.');
+    else setStatus('', 'Seleccionaste ' + id + '. Toca otra vez o usa el botón del panel para ' + (cur.st.open[id] ? 'cerrarlo' : 'abrirlo') + '.');
+    renderAll();
+  }
+  function selectSec(id){ cur.selSec = id; renderAll(); }
+
+  const svg = $('net');
+  svg.addEventListener('click', e => {
+    const dv = e.target.closest('[data-dev]');
+    if (dv){ selectDev(dv.dataset.dev); return; }
+    const sc = e.target.closest('[data-sec]');
+    if (sc) selectSec(sc.dataset.sec);
+  });
+  svg.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const dv = e.target.closest && e.target.closest('[data-dev]');
+    if (dv){ e.preventDefault(); selectDev(dv.dataset.dev); return; }
+    const sc = e.target.closest && e.target.closest('[data-sec]');
+    if (sc){ e.preventDefault(); selectSec(sc.dataset.sec); }
+  });
+
+  $('btnPatrol').addEventListener('click', () => {
+    const {net, st} = cur;
+    if (st.revealed || st.done) return;
+    const res = E.evaluate(net, st.open, st.faults);
+    const s = E.stats(net, st.faults, res.by);
+    st.t += E.T_PATROL; st.cmi += E.T_PATROL * s.out; st.patrols++; st.revealed = true;
+    const msg = 'La brigada patrulló (' + E.T_PATROL + ' min) y reporta la falla en ' + st.faultId + '.';
+    log(msg, 'info'); setStatus('ok', msg); renderAll();
+  });
+  $('btnHint').addEventListener('click', () => {
+    const hs = cur.L.hints, box = $('hintBox');
+    if (cur.hintN < hs.length){ cur.hintN++; cur.st.hints++; }
+    box.hidden = false;
+    box.innerHTML = '<b>Pista ' + cur.hintN + ' de ' + hs.length + '.</b> ' + hs[cur.hintN - 1] + (cur.hintN >= hs.length ? '' : ' <span class="note">(toca «Pista» otra vez para la siguiente)</span>');
+  });
+  $('btnReset').addEventListener('click', () => loadLevel(cur.li, true));
+  $('btnNew').addEventListener('click', () => loadLevel(cur.li, false));
+  $('btnFinish').addEventListener('click', finish);
+
+  /* --- resultado --- */
+  function finish(){
+    const {net, st, L, solved} = cur;
+    if (st.done) return;
+    st.done = true;
+    const res = E.evaluate(net, st.open, st.faults);
+    const s = E.stats(net, st.faults, res.by);
+    const atMax = s.served >= solved.maxServed;
+    const k = L.hidden ? 2.2 : 1.35;
+    let stars = 1;
+    if (s.served <= solved.startServed && solved.maxServed > solved.startServed) stars = 0;
+    else if (atMax){
+      stars = 2;
+      if (st.errors === 0 && st.cmi <= solved.par * k + 5) stars = 3;
+    }
+    if ((bestStars[L.id] || 0) < stars){ bestStars[L.id] = stars; store.set('despachador-stars', bestStars); }
+    renderLevels();
+    const verdict = stars === 3 ? 'Recuperación limpia y rápida.' :
+      stars === 2 ? (st.errors ? 'Recuperaste todo lo posible, pero con errores de maniobra.' : 'Recuperaste todo lo posible, aunque la secuencia pudo ser más rápida.') :
+      stars === 1 ? 'Quedaron clientes sin recuperar que sí se podían recuperar.' : 'Sin avance: no recuperaste ningún cliente adicional.';
+    const seq = solved.path.length ? solved.path.map(p => '<li><b>' + (p.closing ? 'Cerrar ' : 'Abrir ') + p.dev + '</b> · ' + (net.dev[p.dev].remote ? 'telecontrol' : 'manual') + ', ' + p.dt + ' min</li>').join('') : '<li>No hay maniobras que mejoren el servicio.</li>';
+    const next = cur.li < E.LEVELS.length - 1;
+    const r = $('result');
+    r.hidden = false;
+    r.innerHTML = '<h2 id="resTitle">Resultado · nivel ' + L.id + '</h2>' +
+      '<div class="bigstars" aria-label="' + stars + ' de 3 estrellas">' + starStr(stars) + '</div>' +
+      '<p><b>' + verdict + '</b></p>' +
+      '<div class="tableWrap"><table class="cmp"><thead><tr><th></th><th>Tú</th><th>Óptimo*</th></tr></thead><tbody>' +
+      '<tr><td>Clientes sin servicio al final</td><td class="num">' + fmt(s.total - s.served) + '</td><td class="num">' + fmt(s.total - solved.maxServed) + '</td></tr>' +
+      '<tr><td>Clientes-minuto</td><td class="num">' + fmt(st.cmi) + '</td><td class="num">' + fmt(solved.par) + '</td></tr>' +
+      '<tr><td>Tiempo de maniobras</td><td class="num">' + st.t + ' min</td><td class="num">' + solved.parTime + ' min</td></tr>' +
+      '<tr><td>Maniobras</td><td class="num">' + st.ops + '</td><td class="num">' + solved.path.length + '</td></tr>' +
+      '<tr><td>Errores</td><td class="num">' + st.errors + '</td><td class="num">0</td></tr>' +
+      '<tr><td>Patrullajes · pistas</td><td class="num">' + st.patrols + ' · ' + st.hints + '</td><td class="num">0 · 0</td></tr>' +
+      '</tbody></table></div>' +
+      '<p class="note">*El óptimo supone que conoces desde el inicio el tramo fallado y que no cometes errores. Tampoco cuenta el patrullaje.</p>' +
+      '<h3>Una secuencia óptima</h3><ol>' + seq + '</ol>' +
+      '<h3>Qué enseña este nivel</h3><p>' + L.lesson + '</p>' +
+      '<div class="actions">' + (next ? '<button class="btn primary" id="btnNext" type="button">Siguiente nivel</button>' : '') +
+      '<button class="btn" id="btnRetry" type="button">Reintentar</button></div>';
+    const bn = $('btnNext'); if (bn) bn.addEventListener('click', () => { loadLevel(cur.li + 1); window.scrollTo({top:0}); });
+    $('btnRetry').addEventListener('click', () => { loadLevel(cur.li, true); window.scrollTo({top:0}); });
+    // se revela la falla en el esquema para que se vea dónde estaba
+    st.revealed = true;
+    renderAll();
+    r.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'start'});
+  }
+
+  loadLevel(0);
+})();
+</script>
+
+</html>
